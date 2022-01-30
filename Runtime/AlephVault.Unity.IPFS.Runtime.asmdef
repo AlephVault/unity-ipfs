@@ -1,0 +1,16 @@
+{
+    "name": "AlephVault.Unity.IPFS.Runtime",
+    "rootNamespace": "",
+    "references": [
+        "GUID:9fb1e86edc1bf4f46bfc867526bca155"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
