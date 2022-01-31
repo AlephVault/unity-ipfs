@@ -224,3 +224,4 @@ MonoBehaviour:
   - /ipfs/QmejFS6no1bJLffPtWdHrsh19skHyG6run8FmNUsutSCGj/second-level/
   - /ipfs/QmejFS6no1bJLffPtWdHrsh19skHyG6run8FmNUsutSCGj/second-level/second-level-file.txt
   - /ipfs/QmejFS6no1bJLffPtWdHrsh19skHyG6run8FmNUsutSCGj
+  maxSize: 500

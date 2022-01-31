@@ -13,6 +13,9 @@ namespace AlephVault.Unity.IPFS
             
             [SerializeField]
             private string[] ipfsObjects;
+
+            [SerializeField]
+            private ulong maxSize = 0;
             
             private void Start()
             {
@@ -24,7 +27,7 @@ namespace AlephVault.Unity.IPFS
                 IPFSLoader loader = new IPFSLoader(apiEndpoint);
                 foreach (string file in ipfsObjects)
                 {
-                    await loader.Download(file);
+                    await loader.Download(file, maxSize);
                 }
             }
         }

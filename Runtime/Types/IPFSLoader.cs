@@ -100,18 +100,35 @@ namespace AlephVault.Unity.IPFS
             }
             
             /// <summary>
-            ///   Downloads an /ipfs/{cid} or /ipfs/{cid}/path... content
-            ///   into the <see cref="DownloadRoot"/> directory.
+            ///   <para>
+            ///     Downloads an /ipfs/{cid} or /ipfs/{cid}/path... content
+            ///     into the <see cref="DownloadRoot"/> directory. Alternatively,
+            ///     the path may be ipfs://{cid} or ipfs://{cid}/path... instead.
+            ///   </para>
+            ///   <para>
+            ///     The expected maximum size to allow. This serves as a security
+            ///     measure because nobody can know who uploads the ipfs resource
+            ///     and perhaps one would not want a huge download.
+            ///   </para>
             /// </summary>
-            /// <param name="ipfsPath"></param>
-            /// <exception cref="IOException"></exception>
-            public async Task Download(string ipfsPath)
+            /// <param name="ipfsPath">The path to download</param>
+            /// <param name="maxSize">
+            ///   If not zero, the maximum file size to allow for download.
+            /// </param>
+            /// <exception cref="IOException">Error on download</exception>
+            public async Task Download(string ipfsPath, ulong maxSize = 0)
             {
                 // Null ipfs paths make no sense.
                 if (ipfsPath == null) throw new ArgumentNullException(nameof(ipfsPath));
 
                 // Let's trim the value, both by removing spaces and trailing slash.
                 ipfsPath = ipfsPath.TrimEnd('/').Trim();
+
+                
+                if (ipfsPath.Substring(0, 7).ToLower() == "ipfs://")
+                {
+                    ipfsPath = "/ipfs/" + ipfsPath.Substring(7);
+                }
                 
                 // The path must begin with /ipfs/.
                 if (!ipfsPath.StartsWith("/ipfs/")) throw new ArgumentException(
@@ -123,20 +140,73 @@ namespace AlephVault.Unity.IPFS
                 // The only supported path type is /ipfs/{cid}, being any {cid}
                 // in any recognized version, and an optional /path...
                 Uri apiEndpointUri = new Uri(APIEndpoint);
+
+                // First: If there is an allowed size, then check the allowed size on download.
+                
+                if (maxSize > 0)
+                {
+                    UriBuilder apiPreCheckEndpointUriBuilder = new UriBuilder(apiEndpointUri);
+                    apiPreCheckEndpointUriBuilder.Path = "api/v0/files/stat";
+                    apiPreCheckEndpointUriBuilder.Query = "?arg=" + ipfsPath;
+
+                    using (UnityWebRequest request = UnityWebRequest.Post(apiPreCheckEndpointUriBuilder.Uri,
+                        new Dictionary<string, string>()))
+                    {
+                        // Notes: if the path has a valid format, but does not exist, we
+                        // will face a timeout.
+
+                        // Do the whole request.
+                        await request.SendWebRequest();
+                        
+                        // Expect JSON format.
+                        if (request.GetResponseHeader("Content-Type") != "application/json")
+                        {
+                            throw new IOException($"The response is not JSON. Perhaps the gateway is " +
+                                                  $"misconfigured");
+                        }
+                        
+                        // Parse the request.
+                        NodeStats stats = JsonUtility.FromJson<NodeStats>(request.downloadHandler.text);
+                        
+                        // On non-200, a failure depending on the parsed message.
+                        if (request.responseCode != 200)
+                        {
+                            // Result is either 200 or 500. We use 500 for an IOException.
+                            throw new IOException($"Internal error for path: {ipfsPath}: {stats.Message}");
+                        }
+                        
+                        // Check the cumulative size to be not above the limit.
+                        if (stats.CumulativeSize > maxSize)
+                        {
+                            throw new DownloadSizeExceededException(
+                                $"The size for {ipfsPath} is {stats.CumulativeSize} " +
+                                $"while the allowed size is {maxSize}"
+                            );
+                        }
+                    }
+                }
+                
+                // Then: Download the whole file (or directory).
+
                 UriBuilder apiEndpointUriBuilder = new UriBuilder(apiEndpointUri);
                 apiEndpointUriBuilder.Path = "api/v0/get";
                 apiEndpointUriBuilder.Query = "?arg=" + ipfsPath;
                 
                 using (UnityWebRequest request = UnityWebRequest.Post(apiEndpointUriBuilder.Uri, new Dictionary<string, string>()))
                 {
+                    // Notes: if the path has a valid format, but does not exist, we
+                    // will face a timeout.
+
                     // Do the whole request.
                     await request.SendWebRequest();
+                    
+                    // On non-200, a generic error.
                     if (request.responseCode != 200)
                     {
                         // Result is either 200 or 500. We use 500 for an IOException.
                         throw new IOException($"Path {ipfsPath} not found or not available");
                     }
-                    
+
                     // The next thing to do is determine the download directory. The first
                     // thing to do is to remove the /ipfs/ prefix. Up to this point, at
                     // least one part other than "ipfs/" will exist in the path, so we
