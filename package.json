@@ -1,9 +1,9 @@
 {
   "name": "com.alephvault.unity.ipfs",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "displayName": "Aleph Vault - Unity - IPFS",
   "description": "Utilities to load resources from IPFS.",
-  "unity": "2020.1",
+  "unity": "2023.1",
   "dependencies": {
     "com.alephvault.unity.support": "0.0.1"
   },

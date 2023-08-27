@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using AlephVault.Unity.Support.Types.Async;
 using UnityEngine;
 using UnityEngine.Networking;
 
